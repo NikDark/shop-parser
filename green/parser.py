@@ -11,10 +11,9 @@ HEADERS = {
 STATUS_OK = 200 
 SHOP = "green"
 
-request = requests.Session()
 store_id = 2
 
-def get_product_info(request, url, store_id) -> dict:
+def get_product(request, url, store_id) -> dict:
     data = {}
     try:
         response = request.get(f'{url}?storeId={store_id}', headers=HEADERS)
@@ -40,16 +39,13 @@ def get_price(data:json) -> float:
         pass
     return price
 
-# def is_authorised(request) -> bool:
-#     if request.cookies
-
-def get_product(request, url: str)-> dict:
+def get_product_info(request, url: str)-> dict:
     product = {}
-    data = get_product_info(request, url, store_id)
+    data = get_product(request, url, store_id)
     product["price"] = get_price(data)
     product["name"] = get_name(data)
     product["is_authorise"] = True if 'Authorization' in request.cookies.keys() else False
-    product["shop"] = SHOP
+    product["shop"] = f'{SHOP} - {store_id}'
     
     return product
 
@@ -71,9 +67,14 @@ def authorize(request):
         with open("green/config.json", "r") as read_file:
             cookie = json.load(read_file)
         request.cookies.set_cookie(Cookie(*cookie.values()))
+    user_info = request.get('https://shop.green-market.by/api/v1/users/me').json()
+    if user_info.get('pickUpStoreId'):
+        global store_id
+        store_id = user_info.get('pickUpStoreId')
+    
 
 
 # https://shop.green-market.by/api/v1/products/4570232
-print(get_product(request, 'https://shop.green-market.by/api/v1/products/4317'))
-authorize(request)
-print(get_product(request, 'https://shop.green-market.by/api/v1/products/4317'))
+# print(get_product(request, 'https://shop.green-market.by/api/v1/products/4317'))
+# authorize(request)
+# print(get_product(request, 'https://shop.green-market.by/api/v1/products/4317'))

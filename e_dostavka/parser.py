@@ -26,6 +26,8 @@ def get_product_page(request, url) -> BS:
 
 
 def get_price(product: bs4.BeautifulSoup) -> float:
+    with open("index.html", 'w') as f:
+        f.write(product.prettify())
     try:
         price = float(
             product.find('div', class_='products_card')
@@ -57,7 +59,7 @@ def is_authorised(product: bs4.BeautifulSoup) -> bool:
 def get_product_info(request, url: str)-> dict:
     product = get_product_page(request, url)
     data = {}
-    print(request.cookies.keys())
+
     data["price"] = get_price(product)
     data["name"] = get_name(product)
     data["is_authorise"] = is_authorised(product)
@@ -79,12 +81,10 @@ def authorize(request):
         with open("e-dostavka/config.json", "r") as read_file:
             token_response = json.load(read_file)
     request.get(f'https://e-dostavka.by/cabinet/enter/?token={token_response["Table"][0]["JWT"]}&return=/')
-    return request
 
+# print(get_product_info(request, 'https://e-dostavka.by/catalog/item_1058157.html'))
+# print(get_product_info(request, 'https://e-dostavka.by/catalog/item_1005900.html'))
 
-print(get_product_info(request, 'https://e-dostavka.by/catalog/item_1058157.html'))
+# authorize(request)
 
-authorize_request = authorize(request)
-
-print(get_product_info(authorize_request, 'https://e-dostavka.by/catalog/item_1005900.html'))
-print(get_product_info(authorize_request, 'https://e-dostavka.by/catalog/item_1058157.html'))
+# print(get_product_info(request, 'https://e-dostavka.by/catalog/item_1058157.html'))
