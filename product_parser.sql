@@ -6,8 +6,8 @@ CREATE TABLE public.product_parser
 (
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
     "group" text COLLATE pg_catalog."default" NOT NULL,
-    link text COLLATE pg_catalog."default" NOT NULL,
-    shop text COLLATE pg_catalog."default" NOT NULL,
+    link_e text COLLATE pg_catalog."default" NOT NULL,
+    link_g text COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT product_parser_pkey PRIMARY KEY (id)
 )
 

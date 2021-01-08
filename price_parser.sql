@@ -4,13 +4,14 @@
 
 CREATE TABLE public.price_parser
 (
-    id integer NOT NULL,
+    id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
     date date NOT NULL,
     price double precision NOT NULL,
-    id_product integer NOT NULL,
+    product_id integer NOT NULL,
     authorized boolean NOT NULL,
+    shop text COLLATE pg_catalog."default" NOT NULL,
     CONSTRAINT price_parser_pkey PRIMARY KEY (id),
-    CONSTRAINT id_product_key FOREIGN KEY (id_product)
+    CONSTRAINT id_product_key FOREIGN KEY (product_id)
         REFERENCES public.product_parser (id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
@@ -26,5 +27,5 @@ ALTER TABLE public.price_parser
 
 CREATE INDEX fki_id_product_key
     ON public.price_parser USING btree
-    (id_product ASC NULLS LAST)
+    (product_id ASC NULLS LAST)
     TABLESPACE pg_default;
