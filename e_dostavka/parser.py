@@ -26,8 +26,6 @@ def get_product_page(request, url) -> BS:
 
 
 def get_price(product: bs4.BeautifulSoup) -> float:
-    with open("index.html", 'w') as f:
-        f.write(product.prettify())
     try:
         price = float(
             product.find('div', class_='products_card')
@@ -68,23 +66,25 @@ def get_product_info(request, url: str)-> dict:
 
 
 def authorize(request):
-    if not os.path.exists("e-dostavla/config.json"):
+    if not os.path.exists("e_dostavla/config.json"):
         try:
-            with open("e-dostavka/auth.json", "r") as read_file:
+            with open("e_dostavka/auth.json", "r") as read_file:
                 auth_data = json.load(read_file)
         except FileNotFoundError:
-            return request
+            return
         token_response = request.post('https://rest.eurotorg.by/10201/Json?What=GetJWT', json=auth_data).json()
-        with open("e-dostavka/config.json", "w") as write_file:
+        with open("e_dostavka/config.json", "w") as write_file:
             write_file.write(json.dumps(token_response))
     else:
-        with open("e-dostavka/config.json", "r") as read_file:
+        with open("e_dostavka/config.json", "r") as read_file:
             token_response = json.load(read_file)
-    request.get(f'https://e-dostavka.by/cabinet/enter/?token={token_response["Table"][0]["JWT"]}&return=/')
+    resp = request.get(f'https://e-dostavka.by/cabinet/enter/?token={token_response["Table"][0]["JWT"]}&return=/')
+    # print(resp)
+    return request
 
 # print(get_product_info(request, 'https://e-dostavka.by/catalog/item_1058157.html'))
 # print(get_product_info(request, 'https://e-dostavka.by/catalog/item_1005900.html'))
-
+# # 
 # authorize(request)
 
 # print(get_product_info(request, 'https://e-dostavka.by/catalog/item_1058157.html'))

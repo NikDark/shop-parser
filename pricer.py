@@ -5,11 +5,9 @@ import csv
 
 from green import parser as green_parser
 from e_dostavka import parser as e_parser
-from models import Product
+from models import Product, Price, conn
 from progress.bar import Bar
-
-request_green = requests.Session()
-request_evroopt  = requests.Session()
+from datetime import date
 
 def parsargument():
     parser = argparse.ArgumentParser(description='Parser of shop.green and e-dostavka products')
@@ -31,11 +29,11 @@ arg = parsargument()
 def update_session():
     if (os.path.exists('green/config.json')):
         os.remove('green/config.json')
-    green_parser.authorize(request_green)
+    green_parser.authorize(requests.Session())
 
 def get_products_csv() -> list:
     products = []
-    with open('products.csv', newline='') as csvfile:
+    with open('products.csv', newline='', encoding='utf-8') as csvfile:
         products_csv = csv.DictReader(csvfile)
         for product in products_csv:
             products.append({
@@ -45,32 +43,57 @@ def get_products_csv() -> list:
             })
     return products
 
-def create_product(parser, link, group):
-    product_info = parser.get_product_info(request_evroopt, link)
-    Product.create(
-        shop=product_info.get('shop'),
-        link=link,
-        group = group,
-    )
 
 def load_products():
     products = get_products_csv()
     bar = Bar('Load products', max=len(products))
     for product in products:
-        try:
-            create_product(e_parser, product.get('link-e'), product.get('group'))
-            create_product(green_parser, product.get('link-g'), product.get('group'))
-        except AttributeError:
-            with open('logging.log', 'a') as f:
-                f.write(f'Product {product.get("group")} was not found\n')
+        Product.create(
+            link_e=product.get('link-e'),
+            link_g=product.get('link-g'),
+            group = product.get('group'),
+        )
         bar.next()
     bar.finish()
     
 
-# if arg.update:
-#     update_session()
+def main_parser(parser, request, id, link):
+    product_info = parser.get_product_info(request, link)
+    Price.create(date=date.today(), price=product_info.get('price'), product_id=id, authorized=product_info.get('is_authorise'), shop=product_info.get('shop'))
+
+
+def parse_price():
+    request_green = requests.Session()
+    request_evroopt = requests.Session()
+
+    authorized_request_green = green_parser.authorize(requests.Session())
+    authorized_request_evroopt = e_parser.authorize(requests.Session())
+
+    if date.today() in [price.date for price in Price.select().execute()]:
+        return
+    else:
+        products = Product.select().order_by(Product.id).execute()
+        bar = Bar('Parse prices', max=len(products))
+        
+        for product in products:
+            with conn.atomic() as trn:
+                try:
+                    main_parser(green_parser, request_green, product.id, product.link_g)
+                    main_parser(green_parser, authorized_request_green, product.id, product.link_g)
+                    main_parser(e_parser, request_evroopt, product.id, product.link_e)
+                    main_parser(e_parser, authorized_request_evroopt, product.id, product.link_e)
+                except AttributeError:
+                    trn.rollback()
+                finally:
+                    bar.next()
+        bar.finish()
+
+
 
 if __name__ == "__main__":
+    if arg.update:
+        update_session()
+        exit(0)
     if not Product.select().count():
         load_products()
-    
+    parse_price()

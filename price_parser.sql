@@ -8,12 +8,12 @@ CREATE TABLE public.price_parser
     date date NOT NULL,
     price double precision NOT NULL,
     id_product integer NOT NULL,
+    authorized boolean NOT NULL,
     CONSTRAINT price_parser_pkey PRIMARY KEY (id),
     CONSTRAINT id_product_key FOREIGN KEY (id_product)
         REFERENCES public.product_parser (id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
-        NOT VALID
 )
 
 TABLESPACE pg_default;

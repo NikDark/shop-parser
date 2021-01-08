@@ -60,9 +60,12 @@ def authorize(request):
                 print("Try again and in correct format")
         request.post('https://shop.green-market.by/api/v1/auth/request-confirm-code/', json={"phoneNumber" : phone_number})
         response = request.post('https://shop.green-market.by/api/v1/auth/verify-confirm-code/', json={"phoneNumber": phone_number, "code" : input("Enter your code: ")})
-
-        with open("green/config.json", "w") as write_file:
-            write_file.write(json.dumps(response.cookies._cookies['shop.green-market.by']['/']['Authorization'].__dict__))
+        if response.status_code == STATUS_OK:
+            with open("green/config.json", "w") as write_file:
+                write_file.write(json.dumps(response.cookies._cookies['shop.green-market.by']['/']['Authorization'].__dict__))
+        else:
+            print("invalid phone number or code")
+            return request
     else:
         with open("green/config.json", "r") as read_file:
             cookie = json.load(read_file)
@@ -71,6 +74,7 @@ def authorize(request):
     if user_info.get('pickUpStoreId'):
         global store_id
         store_id = user_info.get('pickUpStoreId')
+    return request
     
 
 
