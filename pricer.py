@@ -9,6 +9,7 @@ from models import Product, Price, conn
 from progress.bar import Bar
 from datetime import date
 
+
 def parsargument():
     parser = argparse.ArgumentParser(description='Parser of shop.green and e-dostavka products')
     parser.add_argument(
@@ -24,12 +25,15 @@ def parsargument():
     )
     return parser.parse_args()
 
+
 arg = parsargument()
+
 
 def update_session():
     if (os.path.exists('green/config.json')):
         os.remove('green/config.json')
     green_parser.authorize(requests.Session())
+
 
 def get_products_csv() -> list:
     products = []
@@ -59,7 +63,7 @@ def load_products():
 
 def main_parser(parser, request, id, link):
     product_info = parser.get_product_info(request, link)
-    Price.create(date=date.today(), price=product_info.get('price'), product_id=id, authorized=product_info.get('is_authorise'), shop=product_info.get('shop'))
+    Price.create(date=date(2021, 1, 7), price=product_info.get('price'), product_id=id, authorized=product_info.get('is_authorise'), shop=product_info.get('shop'))
 
 
 def parse_price():
@@ -69,7 +73,7 @@ def parse_price():
     authorized_request_green = green_parser.authorize(requests.Session())
     authorized_request_evroopt = e_parser.authorize(requests.Session())
 
-    if date.today() in [price.date for price in Price.select().execute()]:
+    if date(2021, 1, 7) in [price.date for price in Price.select().execute()]:
         return
     else:
         products = Product.select().order_by(Product.id).execute()
@@ -89,6 +93,31 @@ def parse_price():
         bar.finish()
 
 
+# def get_prices()
+
+
+def compare(days_count : int):
+    # TODO делать парсер всегда ровно в 00:00
+    days = [day.date for day in Price.select().distinct(Price.date)]
+    
+    if days_count >= len(days):
+        print(f"Parser has only {len(days)} day(s) info")
+        return
+    elif days_count <= 0:
+        print(f"Error with days_count <= 0")
+        return
+    else:
+        for product in Product.select().execute():
+            today_prices = Price.select().where((Price.date == date.today()) & (Price.product == product.id)).execute()
+            past_prices = Price.select().where((Price.date == days[-days_count-1]) & (Price.product == product.id)).execute()
+            # print(today_prices)
+            print('-------')
+            for prices in zip(today_prices, past_prices):
+                print(prices[0].date, prices[0].authorized, prices[0].price, prices[0].shop)
+                print(prices[1].date, prices[1].authorized, prices[1].price, prices[1].shop)
+            
+    # pass
+
 
 if __name__ == "__main__":
     if arg.update:
@@ -97,3 +126,4 @@ if __name__ == "__main__":
     if not Product.select().count():
         load_products()
     parse_price()
+    compare(1)
