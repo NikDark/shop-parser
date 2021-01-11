@@ -3,14 +3,12 @@ import argparse
 import requests
 import csv
 
-from decimal import *
+
 from green import parser as green_parser
 from e_dostavka import parser as e_parser
 from models import Product, Price, conn
 from progress.bar import Bar
 from datetime import date
-
-getcontext().prec = 2
 
 def parsargument():
     parser = argparse.ArgumentParser(description='Parser of shop.green and e-dostavka products')
@@ -26,9 +24,6 @@ def parsargument():
         help="Compare for the last N days"
     )
     return parser.parse_args()
-
-
-arg = parsargument()
 
 
 def update_session():
@@ -65,7 +60,7 @@ def load_products():
 
 def main_parser(parser, request, id, link):
     product_info = parser.get_product_info(request, link)
-    Price.create(date=date(2021, 1, 9), price=product_info.get('price'), product_id=id, authorized=product_info.get('is_authorise'), shop=product_info.get('shop'))
+    Price.create(date=date.today(), price=product_info.get('price'), product_id=id, authorized=product_info.get('is_authorise'), shop=product_info.get('shop'))
 
 
 def parse_price():
@@ -75,7 +70,7 @@ def parse_price():
     authorized_request_green = green_parser.authorize(requests.Session())
     authorized_request_evroopt = e_parser.authorize(requests.Session())
 
-    if date(2021, 1, 9) in [price.date for price in Price.select().execute()]:
+    if date.today() in [price.date for price in Price.select().execute()]:
         return
     else:
         products = Product.select().order_by(Product.id).execute()
@@ -95,13 +90,9 @@ def parse_price():
         bar.finish()
 
 
-# def get_prices()
-
-
 def compare(days_count : int):
     TODAY_PRICE = 0
     PAST_PRICE = 1
-    # TODO делать парсер всегда ровно в 00:00
     days = [day.date for day in Price.select().distinct(Price.date)] # Get all days 
     
     if days_count >= len(days):
@@ -114,28 +105,28 @@ def compare(days_count : int):
         for product in Product.select().execute():
             today_prices = Price.select().where((Price.date == date.today()) & (Price.product == product.id)).order_by(Price.shop).execute()
             past_prices = Price.select().where((Price.date == days[-days_count-1]) & (Price.product == product.id)).order_by(Price.shop).execute()
-            # print(today_prices)
+            
             print('-------')
             for prices in zip(today_prices, past_prices):
                 print("Price for {:s} has {:s} by {:.2f} in shop '{:s}' for {:s} user".format(
                     prices[TODAY_PRICE].product.group, 
-                    'increased' if prices[TODAY_PRICE].price >= prices[PAST_PRICE].price 
-                        else 'decreased', 
+                    'increased' if prices[TODAY_PRICE].price > prices[PAST_PRICE].price 
+                        else 'decreased' if prices[TODAY_PRICE].price < prices[PAST_PRICE].price else 'not changed', 
                     prices[TODAY_PRICE].price - prices[PAST_PRICE].price 
                         if prices[TODAY_PRICE].price >= prices[PAST_PRICE].price 
                         else prices[PAST_PRICE].price - prices[TODAY_PRICE].price, 
                     prices[TODAY_PRICE].shop,
                     'authorized' if prices[TODAY_PRICE].authorized
                     else 'not authorized'))
-            
-    # pass
 
 
 if __name__ == "__main__":
+    arg = parsargument()
     if arg.update:
         update_session()
         exit(0)
     if not Product.select().count():
         load_products()
     parse_price()
-    compare(1)
+    if arg.compare:
+        compare(arg.compare)
